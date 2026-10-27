@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Expense Tracker</title><link rel="stylesheet" th:href="@{/styles.css}"></head>
+<body><main class="container">
+<header class="page-header"><div><p class="eyebrow">PERSONAL FINANCE</p><h1>Expense Tracker</h1><p class="muted">Know where your money goes.</p></div></header>
+<p class="notice" th:if="${message}" th:text="${message}"></p>
+<section class="summary"><div class="card total-card"><span>This month</span><strong th:text="${#numbers.formatDecimal(monthTotal, 1, 2)}">0.00</strong><small th:text="${monthLabel}">Month</small></div><div class="card"><span>All time</span><strong th:text="${#numbers.formatDecimal(grandTotal, 1, 2)}">0.00</strong><small><span th:text="${expenses.size()}">0</span> recorded expenses</small></div></section>
+<section class="panel"><h2>Add an expense</h2><form th:action="@{/expenses}" th:object="${expenseForm}" method="post" class="expense-form">
+<label>Name<input th:field="*{name}" placeholder="e.g. Lunch" required maxlength="100"><small class="error" th:errors="*{name}"></small></label>
+<label>Category<input th:field="*{category}" placeholder="e.g. Food" required maxlength="50"><small class="error" th:errors="*{category}"></small></label>
+<label>Amount<input th:field="*{amount}" type="number" min="0.01" step="0.01" placeholder="0.00" required><small class="error" th:errors="*{amount}"></small></label>
+<label>Date<input th:field="*{date}" type="date" required><small class="error" th:errors="*{date}"></small></label>
+<label class="wide">Note <span class="muted">(optional)</span><input th:field="*{note}" placeholder="A little more detail" maxlength="250"></label><button type="submit">Save expense</button></form></section>
+<section class="panel"><div class="section-heading"><div><h2>Recent expenses</h2><p class="muted">Newest first</p></div><a class="export-button" href="/expenses/export">Export to Excel</a></div>
+<div class="empty" th:if="${expenses.isEmpty()}">No expenses yet. Add your first one above.</div>
+<div class="table-wrap" th:unless="${expenses.isEmpty()}"><table><thead><tr><th>Date</th><th>Expense</th><th>Category</th><th>Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>
+<tr th:each="expense : ${expenses}"><td th:text="${expense.date}">Date</td><td class="expense-name" th:text="${expense.name}">Name</td><td><span class="tag" th:text="${expense.category}">Category</span></td><td class="muted" th:text="${expense.note}">Note</td><td class="amount" th:text="${#numbers.formatDecimal(expense.amount, 1, 2)}">0.00</td><td><form th:action="@{/expenses/{id}/delete(id=${expense.id})}" method="post"><button class="delete-button" type="submit" aria-label="Delete expense">Delete</button></form></td></tr>
+</tbody></table></div></section><footer>Expense Tracker · Your records are stored in your local PostgreSQL database.</footer></main></body></html>
