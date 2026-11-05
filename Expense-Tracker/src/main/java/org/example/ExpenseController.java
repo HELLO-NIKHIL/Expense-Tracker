@@ -17,10 +17,14 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.io.IOException;
+import java.util.List;
 
 /** Handles browser requests and chooses which HTML page to return. */
 @Controller
 public class ExpenseController {
+    private static final List<String> CATEGORIES = List.of(
+            "Food", "Transport", "Shopping", "Bills", "Health", "Entertainment", "Education", "Other");
+
     private final ExpenseService expenseService;
     private final ExcelExportService excelExportService;
 
@@ -50,6 +54,20 @@ public class ExpenseController {
         return "redirect:/";
     }
 
+    @PostMapping("/budgets")
+    public String saveBudget(@Valid @ModelAttribute("budgetForm") Budget budget,
+                             BindingResult bindingResult, Model model,
+                             RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            fillDashboard(model);
+            model.addAttribute("budgetForm", budget);
+            return "index";
+        }
+        expenseService.saveMonthlyBudget(budget, YearMonth.now().atDay(1));
+        redirectAttributes.addFlashAttribute("message", "Monthly budget saved for " + budget.getCategory() + ".");
+        return "redirect:/";
+    }
+
     @PostMapping("/expenses/{id}/delete")
     public String deleteExpense(@PathVariable long id, RedirectAttributes redirectAttributes) {
         expenseService.delete(id);
@@ -69,14 +87,20 @@ public class ExpenseController {
 
     private void fillDashboard(Model model) {
         YearMonth currentMonth = YearMonth.now();
+        model.addAttribute("categories", CATEGORIES);
         model.addAttribute("expenses", expenseService.findRecent());
         model.addAttribute("monthTotal", expenseService.totalBetween(currentMonth.atDay(1), currentMonth.atEndOfMonth()));
         model.addAttribute("grandTotal", expenseService.totalBetween(LocalDate.of(1, 1, 1), LocalDate.of(9999, 12, 31)));
         model.addAttribute("monthLabel", currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+        model.addAttribute("categorySummaries", expenseService.categorySummaries(
+                currentMonth.atDay(1), currentMonth.atEndOfMonth(), currentMonth.atDay(1)));
         if (!model.containsAttribute("expenseForm")) {
             Expense form = new Expense();
             form.setDate(LocalDate.now());
             model.addAttribute("expenseForm", form);
+        }
+        if (!model.containsAttribute("budgetForm")) {
+            model.addAttribute("budgetForm", new Budget());
         }
     }
 }
