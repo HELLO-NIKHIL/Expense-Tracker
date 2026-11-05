@@ -1,49 +1,95 @@
-# Expense Tracker — Spring Boot + PostgreSQL
+# Expense Tracker and Budget Planner
 
-This is a small web app built in steps. A browser page lets you add and delete expenses, view totals, and download all records as an Excel workbook. Spring Boot handles the requests, and PostgreSQL stores the records.
+A Spring Boot web application for recording expenses, reviewing spending, setting monthly category budgets, and exporting expense records to Excel. The dashboard shows current-month and all-time totals, along with each category's spending, budget, remaining amount, and budget status.
 
-## Project map
+## Features
 
-```text
-src/main/java/org/example/
-  Main.java                 starts Spring Boot
-  Expense.java              one expense; JPA maps it to a database row
-  ExpenseController.java    receives browser requests and returns pages
-  ExpenseService.java       contains the app's expense operations
-  ExpenseRepository.java    Spring Data interface for database access
-  ExcelExportService.java   creates the downloadable .xlsx workbook
-src/main/resources/
-  application.properties    database connection settings
-  templates/index.html      the page, rendered by Thymeleaf
-  static/styles.css         page styling
-compose.yaml                starts PostgreSQL in Docker
-pom.xml                     dependencies and build settings
-```
+- Add expenses with a name, category, amount, date, and optional note.
+- View expenses newest first and delete individual records.
+- See current-month and all-time spending totals.
+- Set or update a monthly budget for a category and see whether spending is within the limit.
+- Export all saved expenses as an `.xlsx` workbook.
+- Validate expense and budget fields before saving. Amounts use `BigDecimal` and are limited to two decimal places.
+- Persist expenses and budgets in PostgreSQL.
 
-## Run it
+The available categories are Food, Transport, Shopping, Bills, Health, Entertainment, Education, and Other. Budgets apply to the current calendar month.
 
-You need a JDK matching the Java version in `pom.xml`, Maven, and Docker Desktop.
+## Tech stack
 
-1. Open the project root in IntelliJ and reload the Maven project when prompted. Wait for Maven to download the libraries listed in `pom.xml`.
-2. Start Docker Desktop.
-3. In a terminal opened at the project root, start PostgreSQL:
+- Java 27 and Spring Boot
+- Spring MVC and Thymeleaf for the web interface
+- Spring Data JPA and Hibernate for persistence
+- PostgreSQL 17
+- Apache POI for Excel workbook export
+- Docker Compose for the local database
+
+## Requirements
+
+- JDK 27
+- Maven
+- Docker with Docker Compose
+
+## Run locally
+
+Run these commands from the `Expense-Tracker` project directory:
+
+1. Start PostgreSQL:
 
    ```sh
    docker compose up -d
    ```
 
-4. Run `org.example.Main` from IntelliJ, or from a terminal with Maven installed:
+2. Start the Spring Boot application:
 
    ```sh
    mvn spring-boot:run
    ```
 
-5. Open <http://localhost:8080> in your browser.
+3. Open <http://localhost:8080>.
 
-The Compose file creates a PostgreSQL database and a named volume. The volume keeps database records when the container stops. Stop the database with `docker compose down`; do not add `-v` if you want to keep its data.
+You can also open the project in IntelliJ, reload the Maven project, start the Compose database, and run `org.example.Main`.
 
-## What happens when an expense is added?
+The Compose service creates the `expense_tracker` database with the local development credentials `expense_user` / `expense_pass`. PostgreSQL data is stored in the named volume `expense_tracker_data`. Stop the database with `docker compose down`; keeping the volume preserves saved records.
 
-The HTML form sends a `POST /expenses` request. `ExpenseController` validates the submitted fields and calls `ExpenseService`. The service calls `ExpenseRepository`, which Spring Data implements using JPA. JPA turns the `Expense` object into a database row. The browser is then redirected back to `/`, and the controller loads the saved expenses for Thymeleaf to display.
+## Database configuration
 
-`BigDecimal` stores money without the binary rounding surprises of `double`. The form and Java validation both check the input. `spring.jpa.hibernate.ddl-auto=update` lets Hibernate create/update the development table from the `Expense` class; for a deployed app, database migrations should replace this setting.
+The application reads these environment variables, with the shown local defaults:
+
+| Variable | Default |
+| --- | --- |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/expense_tracker` |
+| `DB_USERNAME` | `expense_user` |
+| `DB_PASSWORD` | `expense_pass` |
+
+Hibernate uses `spring.jpa.hibernate.ddl-auto=update` to maintain the development schema from the JPA entities. For production, use managed secrets and database migrations.
+
+## Main routes
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Dashboard, expense list, totals, and category budgets |
+| `POST` | `/expenses` | Add an expense |
+| `POST` | `/expenses/{id}/delete` | Delete an expense |
+| `POST` | `/budgets` | Save or update a current-month category budget |
+| `GET` | `/expenses/export` | Download all expenses as `expenses.xlsx` |
+
+## Project structure
+
+```text
+src/main/java/org/example/
+  Main.java                 Spring Boot entry point
+  Expense.java              Expense entity and field validation
+  Budget.java               Monthly category budget entity
+  CategorySummary.java       Category spending and budget summary
+  ExpenseController.java    Web routes and dashboard model
+  ExpenseService.java       Expense totals and budget operations
+  ExpenseRepository.java    Expense database queries
+  BudgetRepository.java     Budget database queries
+  ExcelExportService.java   Excel workbook generation
+src/main/resources/
+  application.properties    Database and application settings
+  templates/index.html      Thymeleaf dashboard
+  static/styles.css         Responsive page styling
+compose.yaml                Local PostgreSQL service
+pom.xml                     Dependencies and build settings
+```
